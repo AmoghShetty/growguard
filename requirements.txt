@@ -1,0 +1,4 @@
+flask
+flask-talisman
+google-genai
+python-dotenv

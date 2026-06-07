@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrowGuard — AI Crop Disease Detection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <nav>
+        <div class="logo">🌿 GrowGuard</div>
+        <div class="tagline">AI-Powered Crop Disease Detection</div>
+    </nav>
+
+    <main>
+        <div class="card">
+            <h1>Diagnose Your Plant</h1>
+            <p class="subtitle">Upload a photo and get an instant AI diagnosis</p>
+
+            <div class="upload-area" id="uploadArea">
+                <input type="file" id="imageInput" accept="image/*" hidden>
+                <div class="upload-content" id="uploadContent">
+                    <div class="upload-icon">📷</div>
+                    <p>Click to upload or drag & drop</p>
+                    <span>JPG, PNG up to 10MB</span>
+                </div>
+                <img id="previewImage" src="" alt="Preview" hidden>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="cropType">Crop Type</label>
+                    <select id="cropType">
+                        <option value="">Select crop...</option>
+                        <option value="wheat">Wheat</option>
+                        <option value="rice">Rice</option>
+                        <option value="date palm">Date Palm</option>
+                        <option value="tomato">Tomato</option>
+                        <option value="potato">Potato</option>
+                        <option value="corn">Corn</option>
+                        <option value="cotton">Cotton</option>
+                        <option value="soybean">Soybean</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="region">Region</label>
+                    <select id="region">
+                        <option value="">Select region...</option>
+                        <option value="Middle East">Middle East</option>
+                        <option value="South Asia">South Asia</option>
+                        <option value="Sub-Saharan Africa">Sub-Saharan Africa</option>
+                        <option value="North Africa">North Africa</option>
+                        <option value="Southeast Asia">Southeast Asia</option>
+                        <option value="Latin America">Latin America</option>
+                    </select>
+                </div>
+            </div>
+
+            <button id="analyzeBtn" class="btn" disabled>
+                Analyze Plant
+            </button>
+        </div>
+
+        <!-- Results show up here after analysis -->
+        <div class="results-card" id="resultsCard" hidden>
+            <div class="results-header">
+                <h2>Diagnosis Results</h2>
+                <div id="severityBadge" class="badge"></div>
+            </div>
+            <div id="resultsContent" class="results-content"></div>
+        </div>
+
+        <div class="loader" id="loader" hidden>
+            <div class="spinner"></div>
+            <p>Analyzing your plant...</p>
+        </div>
+        <footer>
+        <p>🌿 GrowGuard — AI diagnosis is for guidance only, not a substitute for professional advice.</p>
+        <p>
+            <a href="#" onclick="openModal('privacyModal')">Privacy Policy</a> ·
+            <a href="#" onclick="openModal('termsModal')">Terms of Service</a>
+        </p>
+    </footer>
+
+    <!-- Privacy Modal -->
+    <div class="modal-overlay" id="privacyModal">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('privacyModal')">✕</button>
+            <h2>Privacy Policy</h2>
+            <p class="subtitle">Last updated: June 2026</p>
+            <div class="legal-content">
+            <h3>What We Collect</h3>
+             <p>When you use GrowGuard, we temporarily process the plant images you upload solely to provide disease diagnosis. We do not store your images after analysis is complete. We do not collect your name, email, or any personal information.</p>
+
+                <h3>How We Use Your Data</h3>
+                <p>Images are sent to Google Gemini AI for analysis and are not retained by us. Your IP address is temporarily used for rate limiting only and is not logged or stored permanently.</p>
+
+                <h3>Third Party Services</h3>
+                <p>We use Google Gemini AI to process images. Please refer to Google's Privacy Policy for information on how Google handles data.</p>
+
+                <h3>Cookies</h3>
+                <p>GrowGuard does not use cookies or tracking technologies of any kind.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terms Modal -->
+    <div class="modal-overlay" id="termsModal">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('termsModal')">✕</button>
+            <h2>Terms of Service</h2>
+            <p class="subtitle">Last updated: June 2026</p>
+            <div class="legal-content">
+                <h3>Important Disclaimer</h3>
+                <p>GrowGuard provides AI-generated plant disease analysis for informational purposes only. Diagnoses are not a substitute for professional agricultural advice. Always consult a qualified agronomist for critical crop decisions.</p>
+
+                <h3>Acceptable Use</h3>
+                <p>You may use GrowGuard only for lawful purposes. You agree not to upload offensive, illegal, or non-plant related images. Automated or bulk requests are prohibited.</p>
+
+                <h3>Accuracy</h3>
+                <p>AI diagnoses may not always be accurate. GrowGuard makes no guarantees about the correctness of any diagnosis. We are not liable for any crop losses or damages resulting from reliance on our analysis.</p>
+
+                <h3>Intellectual Property</h3>
+                <p>You retain ownership of any images you upload. By uploading, you grant GrowGuard a temporary license to process them solely for diagnosis purposes.</p>
+            </div>
+        </div>
+    </div>
+    </main>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const uploadContent = document.getElementById('uploadContent');
+        const previewImage = document.getElementById('previewImage');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const cropType = document.getElementById('cropType');
+        const region = document.getElementById('region');
+        const loader = document.getElementById('loader');
+        const resultsCard = document.getElementById('resultsCard');
+        const resultsContent = document.getElementById('resultsContent');
+        const severityBadge = document.getElementById('severityBadge');
+
+        // Click anywhere on upload area to open file picker
+        uploadArea.addEventListener('click', () => imageInput.click());
+
+        // When user picks an image, show preview
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImage.src = e.target.result;
+                    previewImage.hidden = false;
+                    uploadContent.hidden = true;
+                };
+                reader.readAsDataURL(file);
+                checkFormReady();
+            }
+        });
+
+        // Enable button only when all 3 inputs are filled
+        function checkFormReady() {
+            const hasImage = imageInput.files.length > 0;
+            const hasCrop = cropType.value !== '';
+            const hasRegion = region.value !== '';
+            analyzeBtn.disabled = !(hasImage && hasCrop && hasRegion);
+        }
+
+        cropType.addEventListener('change', checkFormReady);
+        region.addEventListener('change', checkFormReady);
+
+        // When analyze button is clicked
+        analyzeBtn.addEventListener('click', async () => {
+            const formData = new FormData();
+            formData.append('image', imageInput.files[0]);
+            formData.append('crop_type', cropType.value);
+            formData.append('region', region.value);
+
+            // Show loader, hide results
+            loader.hidden = false;
+            resultsCard.hidden = true;
+            analyzeBtn.disabled = true;
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                displayResults(data.result);
+
+            } catch (error) {
+                alert('Something went wrong. Please try again.');
+            } finally {
+                loader.hidden = true;
+                analyzeBtn.disabled = false;
+            }
+        });
+
+        // Parse AI response and display it nicely
+        function displayResults(text) {
+            const lines = text.split('\n').filter(line => line.trim());
+            let html = '';
+            let severity = '';
+
+            lines.forEach(line => {
+                if (line.includes(':')) {
+                    const [label, ...valueParts] = line.split(':');
+                    const value = valueParts.join(':').trim();
+
+                    if (label.trim() === 'SEVERITY') severity = value;
+
+                    html += `
+                        <div class="result-row">
+                            <span class="result-label">${label.trim()}</span>
+                            <span class="result-value">${value}</span>
+                        </div>`;
+                }
+            });
+
+            // Color the severity badge
+            const severityColors = {
+                'None': 'green', 'Mild': 'yellow',
+                'Moderate': 'orange', 'Severe': 'red'
+            };
+            severityBadge.textContent = severity;
+            severityBadge.className = `badge ${severityColors[severity] || 'green'}`;
+
+            resultsContent.innerHTML = html;
+            resultsCard.hidden = false;
+            resultsCard.scrollIntoView({ behavior: 'smooth' });
+        }
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal if user clicks outside it
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
